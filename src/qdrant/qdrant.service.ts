@@ -36,21 +36,19 @@ export class QdrantService {
 
   // ✅ FIX 2: Search using named vector
   async search(vector: number[]): Promise<SearchResult[]> {
-    const result = await this.client.search(this.collection, {
-      vector: {
-        name: 'content_vector',
-        vector,
-      },
-      limit: 5,
-      with_payload: true,
-    });
+  const result = await this.client.search('infor_m3_knowledge', {
+    vector, // ✅ unnamed vector
+    limit: 5,
+    with_payload: true,
+  });
 
-    return result
-      .filter(r => r.score > 0.7)
-      .map(r => ({
-        text: String(r.payload?.text ?? ''),
-        source: String(r.payload?.source ?? 'unknown'),
-        score: r.score,
-      }));
-  }
+  return result
+    .filter(r => r.score > 0.6)
+    .map(r => ({
+      text: String(r.payload?.text ?? ''),
+      source: String(r.payload?.source ?? 'unknown'),
+      score: r.score,
+    }));
+}
+
 }

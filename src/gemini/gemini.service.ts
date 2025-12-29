@@ -1,36 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 
 @Injectable()
 export class GeminiService {
-  private genAI: GoogleGenerativeAI;
+  private readonly apiKey: string;
 
   constructor(private readonly config: ConfigService) {
-    this.genAI = new GoogleGenerativeAI(
-      this.config.getOrThrow<string>('GEMINI_API_KEY')
-    );
+    this.apiKey = this.config.getOrThrow('GEMINI_API_KEY');
   }
 
   async generateAnswer(query: string, context: string): Promise<string> {
-    const model = this.genAI.getGenerativeModel({
-      model: this.config.getOrThrow<string>('GEMINI_LLM_MODEL'),
-    });
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
+        {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `
+You are an expert Infor M3 assistant.
 
-    const prompt = `
-You are an Infor M3 expert.
-Use ONLY the context below to answer.
+Answer ONLY from the context below.
+If not found, say:
+"No relevant information found in Infor M3 knowledge base."
 
 Context:
 ${context}
 
 Question:
 ${query}
+                  `,
+                },
+              ],
+            },
+          ],
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
 
-If the answer is not found, say you do not know.
-`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+      return (
+        response.data.candidates?.[0]?.content?.parts?.[0]?.text ??
+        'No response generated.'
+      );
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        `Gemini v1 Error: ${error.response?.data?.error?.message || error.message}`,
+      );
+    }
   }
 }

@@ -13,6 +13,8 @@ export class AskService {
     private readonly gemini: GeminiService,
   ) {}
 
+  
+  
   async handleQuery(query: string) {
     // 0. Basic validation
     if (!query || !query.trim()) {
